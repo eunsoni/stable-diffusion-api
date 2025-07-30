@@ -22,4 +22,4 @@ COPY main.py .
 EXPOSE 8000
 
 # 애플리케이션 실행
-CMD ["python", "main.py"] 
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

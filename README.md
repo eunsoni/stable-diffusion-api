@@ -18,7 +18,7 @@ FastAPI와 Stable Diffusion을 사용한 이미지 생성 API입니다.
 
 ### 1. 저장소 클론
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/YOUR_USERNAME/stable-diffusion-api.git
 cd stable-diffusion-api
 ```
 

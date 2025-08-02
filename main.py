@@ -7,11 +7,18 @@ import io
 
 app = FastAPI()
 
-# 모델 로드
+# 로컬 경로에 다운로드한 모델을 로드
+MODEL_DIR = "./models/FLUX"  # 필요에 따라 경로 수정
+
 pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5",
+    MODEL_DIR,
     torch_dtype=torch.float16
 ).to("cuda")
+
+# 예: UNet 바이어스 수정 (자유롭게 커스터마이즈 가능)
+with torch.no_grad():
+    pipe.unet.conv_in.bias += 0.01
+
 
 # 이미지 생성 함수 (img2img)
 def generate_image(prompt: str, init_image: Image.Image = None) -> io.BytesIO:

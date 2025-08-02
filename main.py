@@ -8,7 +8,7 @@ import io
 app = FastAPI()
 
 # 로컬 경로에 다운로드한 모델을 로드
-MODEL_DIR = "./models/FLUX"  # 필요에 따라 경로 수정
+MODEL_DIR = "./models/SD15"  # 필요에 따라 경로 수정
 
 pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
     MODEL_DIR,

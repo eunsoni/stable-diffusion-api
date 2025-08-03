@@ -1,32 +1,53 @@
+import os
+import io
+import torch
+from PIL import Image
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import StreamingResponse
-from diffusers import StableDiffusionImg2ImgPipeline
-from PIL import Image
-import torch
-import io
+from diffusers import StableDiffusionImg2ImgPipeline, DDIMScheduler
+from transformers import CLIPTokenizer
 
 app = FastAPI()
 
-# 로컬 경로에 다운로드한 모델을 로드
-MODEL_DIR = "./models/SD15"  # 필요에 따라 경로 수정
+# 저장된 경로
+load_dir = "./saved_sd15"
 
-pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-    MODEL_DIR,
-    torch_dtype=torch.float16
+# 구성요소 불러오기
+unet = torch.load(os.path.join(load_dir, "unet.pth"), map_location="cuda").eval()
+vae = torch.load(os.path.join(load_dir, "vae.pth"), map_location="cuda").eval()
+text_encoder = torch.load(os.path.join(load_dir, "text_encoder.pth"), map_location="cuda").eval()
+tokenizer = CLIPTokenizer.from_pretrained(os.path.join(load_dir, "tokenizer"))
+
+# Scheduler 정의
+scheduler = DDIMScheduler(
+    beta_start=0.00085,
+    beta_end=0.012,
+    beta_schedule="linear",
+    steps_offset=1,
+    clip_sample=False
+)
+
+# 파이프라인 조립
+pipe = StableDiffusionImg2ImgPipeline(
+    vae=vae,
+    text_encoder=text_encoder,
+    tokenizer=tokenizer,
+    unet=unet,
+    scheduler=scheduler,
+    safety_checker=None,
+    feature_extractor=None,
 ).to("cuda")
 
-# 예: UNet 바이어스 수정 (자유롭게 커스터마이즈 가능)
-with torch.no_grad():
-    pipe.unet.conv_in.bias += 0.01
 
-
-# 이미지 생성 함수 (img2img)
+# 이미지 생성 함수
 def generate_image(prompt: str, init_image: Image.Image = None) -> io.BytesIO:
-    if init_image:
+    if init_image is None:
+        raise ValueError("init_image is required for img2img pipeline.")
+    
+    with torch.inference_mode():
         init_image = init_image.resize((512, 512))
-        image = pipe(prompt=prompt, image=init_image, strength=0.75, guidance_scale=7.5).images[0]
-    else:
-        image = pipe(prompt).images[0]
+        result = pipe(prompt=prompt, image=init_image, strength=0.75, guidance_scale=7.5)
+        image = result.images[0]
 
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
@@ -39,10 +60,11 @@ async def generate(
     prompt: str = Form(...),
     image: UploadFile = File(None)
 ):
-    init_image = None
-    if image:
-        contents = await image.read()
-        init_image = Image.open(io.BytesIO(contents)).convert("RGB")
+    if image is None:
+        raise ValueError("Image input is required for img2img.")
+
+    contents = await image.read()
+    init_image = Image.open(io.BytesIO(contents)).convert("RGB")
 
     buffer = generate_image(prompt, init_image)
     return StreamingResponse(buffer, media_type="image/png")

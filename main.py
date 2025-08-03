@@ -10,7 +10,7 @@ from transformers import CLIPTokenizer
 app = FastAPI()
 
 # 저장된 경로
-load_dir = "./saved_sd15"
+load_dir = "/mnt/efs/saved_sd15"
 
 # 구성요소 불러오기
 unet = torch.load(os.path.join(load_dir, "unet.pth"), map_location="cuda").eval()
@@ -46,7 +46,7 @@ def generate_image(prompt: str, init_image: Image.Image = None) -> io.BytesIO:
     
     with torch.inference_mode():
         init_image = init_image.resize((512, 512))
-        result = pipe(prompt=prompt, image=init_image, strength=0.75, guidance_scale=7.5)
+        result = pipe(prompt=prompt, num_inference_steps=50, image=init_image, strength=0.75, guidance_scale=7.5)
         image = result.images[0]
 
     buffer = io.BytesIO()

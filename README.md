@@ -153,8 +153,8 @@ sudo apt install -y nfs-common
 # EFS 마운트 디렉토리 생성
 sudo mkdir -p /mnt/efs
 
-# EFS 마운트 (EFS ID를 본인의 것으로 변경하세요)
-sudo mount -t nfs4 -o nfsvers=4.1 fs-YOUR_EFS_ID.efs.REGION.amazonaws.com:/ /mnt/efs
+# EFS 마운트 (실제 EFS ID 예시)
+sudo mount -t nfs4 -o nfsvers=4.1 fs-040df8c9ef7b96af3.efs.ap-northeast-2.amazonaws.com:/ /mnt/efs
 
 # 정상 마운트 확인
 df -h
@@ -168,11 +168,42 @@ df -h
 # fstab 파일 편집
 sudo nano /etc/fstab
 
-# 아래 라인 추가 (EFS ID와 리전을 본인의 것으로 변경)
-fs-YOUR_EFS_ID.efs.REGION.amazonaws.com:/ /mnt/efs nfs4 defaults,_netdev 0 0
+# 아래 라인 추가 (실제 EFS ID로 변경)
+fs-040df8c9ef7b96af3.efs.ap-northeast-2.amazonaws.com:/ /mnt/efs nfs4 defaults,_netdev 0 0
 ```
 
-### 6. 프로젝트 실행
+### 6. 사전 빌드된 Docker 이미지 실행 (권장)
+
+가장 간단한 방법은 사전 빌드된 Docker 이미지를 사용하는 것입니다:
+
+```bash
+# Docker 이미지 실행 (자동으로 Docker Hub에서 다운로드)
+docker run --rm -it --gpus all \
+  -v /mnt/efs/saved_sd15:/mnt/efs/saved_sd15 \
+  -e CUDA_VISIBLE_DEVICES=0 \
+  -p 8000:8000 \
+  eunsunhub/stable-diffusion-api:efs
+
+# 백그라운드 실행
+docker run -d --name stable-diffusion-api --gpus all \
+  -v /mnt/efs/saved_sd15:/mnt/efs/saved_sd15 \
+  -e CUDA_VISIBLE_DEVICES=0 \
+  -p 8000:8000 \
+  --restart unless-stopped \
+  eunsunhub/stable-diffusion-api:efs
+
+# 컨테이너 상태 확인
+docker ps
+
+# 로그 확인
+docker logs -f stable-diffusion-api
+```
+
+### 7. 소스코드에서 직접 빌드 (선택사항)
+
+### 7. 소스코드에서 직접 빌드 (선택사항)
+
+소스코드를 수정하거나 커스터마이징이 필요한 경우:
 
 ```bash
 # 프로젝트 클론

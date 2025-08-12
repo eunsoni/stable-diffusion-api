@@ -1,65 +1,437 @@
 # Stable Diffusion Image Generation API
 
-FastAPI와 Stable Diffusion을 사용한 이미지 생성 API입니다.
+FastAPI와 Stable Diffusion을 사용한 고성능 이미지 생성 API입니다. 텍스트 프롬프트를 통해 AI 이미지를 생성하고, 기존 이미지를 변환할 수 있는 RESTful API를 제공합니다.
 
-## 기능
+## 🚀 주요 기능
 
-- 텍스트 프롬프트를 통한 이미지 생성
-- 기존 이미지를 기반으로 한 이미지 변환 (img2img)
-- RESTful API 인터페이스
+- **Text-to-Image**: 텍스트 프롬프트를 통한 AI 이미지 생성
+- **Image-to-Image**: 기존 이미지를 기반으로 한 이미지 변환 (img2img)
+- **RESTful API**: 간단하고 직관적인 API 인터페이스
+- **GPU 가속**: NVIDIA GPU를 활용한 빠른 이미지 생성
+- **Docker 지원**: 컨테이너화된 배포로 쉬운 설치 및 관리
+- **자동 문서화**: Swagger UI 및 ReDoc을 통한 API 문서
 
-## 요구사항
+## 📋 시스템 요구사항
 
-- Docker와 Docker Compose
-- NVIDIA GPU (CUDA 지원)
-- NVIDIA Container Toolkit
+### 하드웨어
+- **GPU**: NVIDIA GPU (최소 8GB VRAM 권장)
+- **RAM**: 최소 16GB (32GB 권장)
+- **저장공간**: 최소 10GB (모델 파일 포함)
 
-## 설치 및 실행
+### 소프트웨어
+- **Docker**: 20.10 이상
+- **Docker Compose**: 1.29 이상
+- **NVIDIA Container Toolkit**: GPU 지원을 위해 필요
+- **CUDA**: 11.8 이상 (Docker 이미지에 포함)
 
-### 1. 저장소 클론
+### 지원 OS
+- Ubuntu 18.04 이상
+- CentOS 7 이상
+- Windows 10/11 (WSL2 + Docker Desktop)
+
+## 🛠️ 설치 및 실행
+
+### 사전 준비사항
+
+1. **NVIDIA Container Toolkit 설치** (GPU 지원을 위해 필요)
 ```bash
-git clone https://github.com/YOUR_USERNAME/stable-diffusion-api.git
+# Ubuntu/Debian
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+sudo apt-get update && sudo apt-get install -y nvidia-docker2
+sudo systemctl restart docker
+```
+
+2. **GPU 확인**
+```bash
+nvidia-smi
+```
+
+### 🐳 Docker를 이용한 실행 (권장)
+
+#### 1. 저장소 클론
+```bash
+git clone https://github.com/eunsoni/stable-diffusion-api.git
 cd stable-diffusion-api
 ```
 
-### 2. Docker Compose로 실행
+#### 2. 모델 파일 준비
+이 API는 사전 훈련된 Stable Diffusion 1.5 모델을 사용합니다. 
+모델 파일들이 `/mnt/efs/saved_sd15` 경로에 있어야 합니다.
+
 ```bash
-docker-compose up --build
+# 모델 다운로드 (선택사항 - 자동으로 다운로드됨)
+python download_models.py
 ```
 
-### 3. 로컬 실행 (선택사항)
+#### 3. Docker Compose로 실행
+```bash
+# 백그라운드에서 실행
+docker-compose up -d --build
+
+# 로그 확인
+docker-compose logs -f
+
+# 서비스 중지
+docker-compose down
+```
+
+### 🐍 로컬 환경에서 실행
+
+#### 1. Python 가상환경 생성
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate  # Windows
+```
+
+#### 2. 의존성 설치
 ```bash
 pip install -r requirements.txt
+```
+
+#### 3. 서버 실행
+```bash
 python main.py
 ```
 
-## API 사용법
+서버가 정상적으로 시작되면 `http://localhost:8000`에서 API에 접근할 수 있습니다.
 
-### 이미지 생성
+## 📚 API 사용법
+
+### 기본 엔드포인트
+- **Base URL**: `http://localhost:8000`
+- **Health Check**: `GET /` (서버 상태 확인)
+- **이미지 생성**: `POST /generate`
+
+### 이미지 생성 API
+
+#### 요청 파라미터
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| `prompt` | string | 필수 | 이미지 생성을 위한 텍스트 프롬프트 |
+| `image` | file | 필수 | 변환할 기본 이미지 (img2img) |
+
+#### cURL 예제
+
+**기본 이미지 변환**
 ```bash
 curl -X POST "http://localhost:8000/generate" \
   -H "Content-Type: multipart/form-data" \
-  -F "prompt=a beautiful sunset over mountains"
+  -F "prompt=a beautiful sunset over mountains, oil painting style" \
+  -F "image=@input_image.jpg" \
+  --output generated_image.png
 ```
 
-### 이미지 변환 (img2img)
+**복잡한 프롬프트 예제**
 ```bash
 curl -X POST "http://localhost:8000/generate" \
   -H "Content-Type: multipart/form-data" \
-  -F "prompt=a beautiful sunset over mountains" \
-  -F "image=@input_image.jpg"
+  -F "prompt=professional portrait photo of a cyberpunk character, neon lights, detailed face, 4k, high quality" \
+  -F "image=@portrait.jpg" \
+  --output cyberpunk_portrait.png
 ```
 
-## API 문서
+#### Python 클라이언트 예제
 
-서버 실행 후 다음 URL에서 API 문서를 확인할 수 있습니다:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+```python
+import requests
 
-## 환경 변수
+# 기본 사용법
+def generate_image(prompt, image_path):
+    url = "http://localhost:8000/generate"
+    
+    with open(image_path, 'rb') as f:
+        files = {'image': f}
+        data = {'prompt': prompt}
+        
+        response = requests.post(url, files=files, data=data)
+        
+        if response.status_code == 200:
+            with open('generated_image.png', 'wb') as output:
+                output.write(response.content)
+            print("이미지가 성공적으로 생성되었습니다!")
+        else:
+            print(f"오류 발생: {response.status_code}")
 
-- `CUDA_VISIBLE_DEVICES`: 사용할 GPU 설정 (기본값: 0)
+# 사용 예제
+generate_image(
+    prompt="a serene landscape with mountains and lake, impressionist style",
+    image_path="input.jpg"
+)
+```
 
-## 라이선스
+#### JavaScript/Node.js 예제
 
-MIT License 
+```javascript
+const FormData = require('form-data');
+const fs = require('fs');
+const axios = require('axios');
+
+async function generateImage(prompt, imagePath) {
+    const form = new FormData();
+    form.append('prompt', prompt);
+    form.append('image', fs.createReadStream(imagePath));
+    
+    try {
+        const response = await axios.post('http://localhost:8000/generate', form, {
+            headers: form.getHeaders(),
+            responseType: 'stream'
+        });
+        
+        response.data.pipe(fs.createWriteStream('generated_image.png'));
+        console.log('이미지가 성공적으로 생성되었습니다!');
+    } catch (error) {
+        console.error('오류 발생:', error.message);
+    }
+}
+
+// 사용 예제
+generateImage(
+    "a futuristic city skyline at night, cyberpunk style",
+    "input.jpg"
+);
+```
+
+### 응답 형식
+
+**성공 응답 (200 OK)**
+- Content-Type: `image/png`
+- Body: 생성된 이미지 바이너리 데이터
+
+**오류 응답**
+```json
+{
+    "detail": "오류 메시지"
+}
+```
+
+### 프롬프트 작성 팁
+
+#### 효과적인 프롬프트 구조
+```
+[주제/객체] + [스타일] + [품질 키워드] + [기술적 세부사항]
+```
+
+#### 예제
+- `"portrait of a woman, renaissance painting style, highly detailed, 4k, masterpiece"`
+- `"landscape with mountains, impressionist style, vibrant colors, oil painting"`
+- `"cyberpunk city, neon lights, futuristic, detailed architecture, night scene"`
+
+#### 품질 향상 키워드
+- `highly detailed`, `4k`, `8k`, `masterpiece`
+- `professional photography`, `studio lighting`
+- `artstation`, `concept art`, `digital art`
+
+## 📖 API 문서
+
+서버 실행 후 다음 URL에서 대화형 API 문서를 확인할 수 있습니다:
+
+- **Swagger UI**: http://localhost:8000/docs
+  - 대화형 API 테스트 인터페이스
+  - 실시간으로 API 호출 테스트 가능
+  
+- **ReDoc**: http://localhost:8000/redoc
+  - 깔끔한 API 문서 뷰
+  - 상세한 스키마 정보 제공
+
+## ⚙️ 설정 및 환경 변수
+
+### 환경 변수
+
+| 변수명 | 기본값 | 설명 |
+|-------|--------|------|
+| `CUDA_VISIBLE_DEVICES` | `0` | 사용할 GPU 디바이스 번호 |
+| `MODEL_PATH` | `/mnt/efs/saved_sd15` | 모델 파일 저장 경로 |
+| `HOST` | `0.0.0.0` | 서버 호스트 주소 |
+| `PORT` | `8000` | 서버 포트 번호 |
+
+### Docker Compose 설정 사용자 정의
+
+`docker-compose.yml` 파일을 수정하여 설정을 변경할 수 있습니다:
+
+```yaml
+version: '3.8'
+
+services:
+  stable-diffusion-api:
+    build: .
+    ports:
+      - "8000:8000"  # 포트 변경 시 수정
+    environment:
+      - CUDA_VISIBLE_DEVICES=0  # GPU 설정
+    runtime: nvidia
+    volumes:
+      - /your/model/path:/mnt/efs/saved_sd15  # 모델 경로 변경
+    restart: unless-stopped
+```
+
+## 🔧 개발 및 기여
+
+### 개발 환경 설정
+
+1. **개발 의존성 설치**
+```bash
+pip install -r requirements.txt
+pip install pytest black flake8
+```
+
+2. **코드 포맷팅**
+```bash
+black .
+flake8 .
+```
+
+3. **테스트 실행**
+```bash
+pytest
+```
+
+### 프로젝트 구조
+
+```
+stable-diffusion-api/
+├── main.py                 # FastAPI 애플리케이션 메인 파일
+├── download_models.py      # 모델 다운로드 스크립트
+├── requirements.txt        # Python 의존성
+├── Dockerfile             # Docker 이미지 빌드 설정
+├── docker-compose.yml     # Docker Compose 설정
+└── README.md              # 프로젝트 문서
+```
+
+### 주요 의존성
+
+| 패키지 | 버전 | 용도 |
+|-------|------|------|
+| `fastapi` | 0.104.1 | 웹 API 프레임워크 |
+| `torch` | 2.2.2 | 딥러닝 프레임워크 |
+| `diffusers` | 0.34.0 | Stable Diffusion 파이프라인 |
+| `transformers` | 4.54.1 | 트랜스포머 모델 |
+| `Pillow` | 10.1.0 | 이미지 처리 |
+
+## 🚀 성능 최적화
+
+### GPU 메모리 최적화
+```python
+# 메모리 효율적인 설정
+pipe.enable_memory_efficient_attention()
+pipe.enable_xformers_memory_efficient_attention()
+```
+
+### 배치 처리
+여러 이미지를 동시에 생성할 때는 배치 처리를 고려하세요:
+
+```python
+# 여러 프롬프트 동시 처리
+prompts = ["prompt1", "prompt2", "prompt3"]
+images = pipe(prompts, num_inference_steps=50)
+```
+
+## 🛠️ 문제 해결
+
+### 일반적인 문제들
+
+#### 1. GPU 메모리 부족
+```
+CUDA out of memory
+```
+**해결방법:**
+- 이미지 해상도 낮추기 (512x512 권장)
+- 배치 크기 줄이기
+- `torch.cuda.empty_cache()` 사용
+
+#### 2. 모델 로딩 실패
+```
+FileNotFoundError: Model files not found
+```
+**해결방법:**
+- 모델 경로 확인: `/mnt/efs/saved_sd15`
+- `download_models.py` 실행하여 모델 다운로드
+
+#### 3. Docker 권한 문제
+```
+Permission denied
+```
+**해결방법:**
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+#### 4. NVIDIA Runtime 오류
+```
+could not select device driver with capabilities: [[gpu]]
+```
+**해결방법:**
+- NVIDIA Container Toolkit 재설치
+- Docker 재시작: `sudo systemctl restart docker`
+
+### 로그 확인
+
+```bash
+# Docker 로그 확인
+docker-compose logs -f
+
+# 특정 컨테이너 로그
+docker logs <container_id>
+```
+
+## 📊 모니터링
+
+### GPU 사용량 모니터링
+```bash
+# 실시간 GPU 상태 확인
+watch -n 1 nvidia-smi
+
+# GPU 메모리 사용량 확인
+nvidia-smi --query-gpu=memory.used,memory.total --format=csv
+```
+
+### API 성능 모니터링
+- 응답 시간 측정
+- 동시 요청 처리 능력 테스트
+- 메모리 사용량 모니터링
+
+## 🤝 기여하기
+
+이 프로젝트에 기여하고 싶으시다면:
+
+1. 이 저장소를 Fork하세요
+2. 새로운 기능 브랜치를 생성하세요 (`git checkout -b feature/AmazingFeature`)
+3. 변경사항을 커밋하세요 (`git commit -m 'Add some AmazingFeature'`)
+4. 브랜치에 Push하세요 (`git push origin feature/AmazingFeature`)
+5. Pull Request를 열어주세요
+
+### 기여 가이드라인
+- 코드 스타일: Black 포맷터 사용
+- 테스트: 새로운 기능에 대한 테스트 추가
+- 문서화: README 및 코드 주석 업데이트
+
+## 📞 지원 및 연락
+
+- **이슈 리포트**: [GitHub Issues](https://github.com/eunsoni/stable-diffusion-api/issues)
+- **기능 요청**: [GitHub Discussions](https://github.com/eunsoni/stable-diffusion-api/discussions)
+- **이메일**: your-email@example.com
+
+## 🔗 관련 링크
+
+- [Stable Diffusion 공식 문서](https://huggingface.co/docs/diffusers/index)
+- [FastAPI 문서](https://fastapi.tiangolo.com/)
+- [Docker 설치 가이드](https://docs.docker.com/get-docker/)
+- [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-docker)
+
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
+## 🙏 감사의 말
+
+- [Stability AI](https://stability.ai/) - Stable Diffusion 모델 제공
+- [Hugging Face](https://huggingface.co/) - Diffusers 라이브러리 및 모델 호스팅
+- [FastAPI](https://fastapi.tiangolo.com/) - 훌륭한 웹 프레임워크
+
+---
+
+**⭐ 이 프로젝트가 도움이 되었다면 스타를 눌러주세요!** 

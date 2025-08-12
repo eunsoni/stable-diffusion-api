@@ -1,11 +1,23 @@
 # Stable Diffusion Image Generation API
 
-FastAPI와 Stable Diffusion을 사용한 고성능 이미지 생성 API입니다. 텍스트 프롬프트를 통해 AI 이미지를 생성하고, 기존 이미지를 변환할 수 있는 RESTful API를 제공합니다.
+FastAPI와 Stable Diffusion을 사용한 고성능 이미지 변환 API입니다. 기존 이미지와 텍스트 프롬프트를 통해 새로운 스타일의 이미지를 생성할 수 있는 RESTful API를 제공합니다.
 
-## 🚀 주요 기능
+## � 목차
 
-- **Text-to-Image**: 텍스트 프롬프트를 통한 AI 이미지 생성
+- [🚀 주요 기능](#-주요-기능)
+- [📋 시스템 요구사항](#-시스템-요구사항)
+- [🛠️ 설치 및 실행](#️-설치-및-실행)
+- [☁️ AWS 인스턴스 설정 가이드](#️-aws-인스턴스-설정-가이드)
+- [📚 API 사용법](#-api-사용법)
+- [📖 API 문서](#-api-문서)
+- [⚙️ 설정 및 환경 변수](#️-설정-및-환경-변수)
+- [🔧 개발 및 기여](#-개발-및-기여)
+- [🛠️ 문제 해결](#️-문제-해결)
+
+## �🚀 주요 기능
+
 - **Image-to-Image**: 기존 이미지를 기반으로 한 이미지 변환 (img2img)
+- **텍스트 프롬프트**: 상세한 텍스트 설명을 통한 이미지 스타일 변경
 - **RESTful API**: 간단하고 직관적인 API 인터페이스
 - **GPU 가속**: NVIDIA GPU를 활용한 빠른 이미지 생성
 - **Docker 지원**: 컨테이너화된 배포로 쉬운 설치 및 관리
@@ -201,8 +213,6 @@ docker logs -f stable-diffusion-api
 
 ### 7. 소스코드에서 직접 빌드 (선택사항)
 
-### 7. 소스코드에서 직접 빌드 (선택사항)
-
 소스코드를 수정하거나 커스터마이징이 필요한 경우:
 
 ```bash
@@ -250,10 +260,11 @@ python main.py
 
 ### 기본 엔드포인트
 - **Base URL**: `http://localhost:8000`
-- **Health Check**: `GET /` (서버 상태 확인)
-- **이미지 생성**: `POST /generate`
+- **이미지 변환**: `POST /generate`
 
-### 이미지 생성 API
+### 이미지 변환 API
+
+이 API는 **Image-to-Image (img2img)** 기능만 지원합니다. 기존 이미지를 업로드하고 텍스트 프롬프트를 제공하면 새로운 스타일의 이미지로 변환됩니다.
 
 #### 요청 파라미터
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -357,20 +368,22 @@ generateImage(
 
 ### 프롬프트 작성 팁
 
-#### 효과적인 프롬프트 구조
+#### 효과적인 프롬프트 구조 (img2img용)
 ```
-[주제/객체] + [스타일] + [품질 키워드] + [기술적 세부사항]
+[원하는 스타일] + [품질 키워드] + [분위기/조명] + [기술적 세부사항]
 ```
 
-#### 예제
-- `"portrait of a woman, renaissance painting style, highly detailed, 4k, masterpiece"`
-- `"landscape with mountains, impressionist style, vibrant colors, oil painting"`
-- `"cyberpunk city, neon lights, futuristic, detailed architecture, night scene"`
+#### 이미지 변환 예제
+- `"oil painting style, highly detailed, warm lighting, masterpiece"` - 유화 스타일로 변환
+- `"watercolor painting, soft colors, artistic, high quality"` - 수채화 스타일로 변환
+- `"cyberpunk style, neon lights, futuristic, detailed, 4k"` - 사이버펑크 스타일로 변환
+- `"pencil sketch, black and white, artistic drawing, detailed"` - 연필 스케치로 변환
+- `"anime style, colorful, detailed face, high quality"` - 애니메이션 스타일로 변환
 
 #### 품질 향상 키워드
-- `highly detailed`, `4k`, `8k`, `masterpiece`
-- `professional photography`, `studio lighting`
-- `artstation`, `concept art`, `digital art`
+- `highly detailed`, `4k`, `8k`, `masterpiece`, `high quality`
+- `professional photography`, `studio lighting`, `dramatic lighting`
+- `artstation`, `concept art`, `digital art`, `fine art`
 
 ## 📖 API 문서
 

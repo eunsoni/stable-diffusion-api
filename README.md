@@ -78,6 +78,122 @@ docker-compose logs -f
 docker-compose down
 ```
 
+## ☁️ AWS 인스턴스 설정 가이드 (선택사항)
+
+새로운 AWS 인스턴스에서 EFS를 사용하여 이 프로젝트를 실행하는 전체 설정 과정입니다.
+
+### 1. Docker 설치
+
+```bash
+# Docker 설치를 위한 필수 패키지를 설치합니다
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg lsb-release
+
+# Docker의 공식 GPG 키를 추가합니다
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Docker의 공식 저장소를 추가합니다
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Docker 엔진과 관련 패키지를 설치합니다
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Docker가 제대로 설치되었는지 확인합니다
+sudo systemctl status docker
+
+# sudo 없이 Docker 명령어를 실행하려면 현재 사용자를 docker 그룹에 추가합니다
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### 2. NVIDIA 드라이버 설치 (GPU 인스턴스의 경우)
+
+```bash
+# NVIDIA 드라이버 자동 설치
+sudo apt install -y ubuntu-drivers-common
+sudo ubuntu-drivers autoinstall
+sudo reboot
+
+# 재접속 후 드라이버 확인
+nvidia-smi
+```
+
+### 3. NVIDIA Container Toolkit 설치
+
+```bash
+# NVIDIA Container Toolkit 저장소 추가
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+&& curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+| sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+&& curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list \
+| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# NVIDIA Container Toolkit 설치
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# GPU 인식 테스트 (선택사항)
+docker run --rm --gpus all nvidia/cuda:12.3.2-base-ubuntu22.04 nvidia-smi
+```
+
+### 4. EFS 설치 및 마운트
+
+```bash
+# NFS 클라이언트 설치
+sudo apt update
+sudo apt install -y nfs-common
+
+# EFS 마운트 디렉토리 생성
+sudo mkdir -p /mnt/efs
+
+# EFS 마운트 (EFS ID를 본인의 것으로 변경하세요)
+sudo mount -t nfs4 -o nfsvers=4.1 fs-YOUR_EFS_ID.efs.REGION.amazonaws.com:/ /mnt/efs
+
+# 정상 마운트 확인
+df -h
+```
+
+### 5. EFS 자동 마운트 설정 (선택사항)
+
+인스턴스 재부팅 시 EFS를 자동으로 마운트하려면:
+
+```bash
+# fstab 파일 편집
+sudo nano /etc/fstab
+
+# 아래 라인 추가 (EFS ID와 리전을 본인의 것으로 변경)
+fs-YOUR_EFS_ID.efs.REGION.amazonaws.com:/ /mnt/efs nfs4 defaults,_netdev 0 0
+```
+
+### 6. 프로젝트 실행
+
+```bash
+# 프로젝트 클론
+git clone https://github.com/eunsoni/stable-diffusion-api.git
+cd stable-diffusion-api
+
+# Docker Compose로 실행
+docker-compose up -d --build
+
+# 서비스 상태 확인
+docker-compose ps
+```
+
+### AWS 보안 그룹 설정
+
+API 서버에 외부에서 접근하려면 보안 그룹에서 포트 8000을 허용해야 합니다:
+
+- **포트**: 8000
+- **프로토콜**: TCP
+- **소스**: 0.0.0.0/0 (모든 IP 허용) 또는 특정 IP 범위
+
 ### 🐍 로컬 환경에서 실행
 
 #### 1. Python 가상환경 생성
